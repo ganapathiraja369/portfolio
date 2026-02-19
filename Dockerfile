@@ -1,5 +1,6 @@
 # Multi-stage build for optimized Docker image
-FROM openjdk:17-jdk-slim as builder
+# Using Eclipse Temurin (official maintained JDK distribution by Adoptium)
+FROM eclipse-temurin:17-jdk-slim as builder
 
 WORKDIR /build
 
@@ -13,7 +14,7 @@ COPY src/ src/
 RUN ./mvnw clean package -DskipTests
 
 # Runtime stage
-FROM openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre-slim
 
 WORKDIR /app
 
