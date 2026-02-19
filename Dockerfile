@@ -1,6 +1,6 @@
 # Multi-stage build for optimized Docker image
 # Using Eclipse Temurin (official maintained JDK distribution by Adoptium)
-FROM eclipse-temurin:17-jdk-alpine as builder
+FROM eclipse-temurin:17-jdk-alpine AS builder
 
 WORKDIR /build
 
