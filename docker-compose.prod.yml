@@ -57,7 +57,7 @@ services:
       SPRING_PROFILES_ACTIVE: prod
       
       # MongoDB with authentication
-      SPRING_DATA_MONGODB_URI: mongodb://${MONGODB_USER:-admin}:${MONGODB_PASSWORD}@mongodb:27017/portfolio_db?authSource=admin&replicaSet=rs0
+      SPRING_DATA_MONGODB_URI: ${DATASOURCE_URL}
       SPRING_DATA_MONGODB_AUTO_INDEX_CREATION: "true"
       
       # Email configuration (use secrets in production)

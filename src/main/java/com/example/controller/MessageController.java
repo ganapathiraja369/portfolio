@@ -68,7 +68,6 @@ public class MessageController {
      * API 1: Save or Update a message
      * POST /api/messages - saves a new message
      * PUT /api/messages/{id} - updates an existing message
-     * 
      * Accepts complete JSON body with: name, email, message, fingerPrint
      * The ID is auto-generated for new messages
      */
@@ -104,7 +103,7 @@ public class MessageController {
      * @param request the updated message data
      * @return the updated message
      */
-    //@PutMapping("/{id}")
+    @PutMapping("/getted/{id}")
     public ResponseEntity<ApiResponse<Message>> updateMessage(
             @PathVariable String id,
             @RequestBody MessageRequest request) {
@@ -119,12 +118,8 @@ public class MessageController {
 
             Optional<Message> updatedMessage = messageService.update(id, message);
 
-            if (updatedMessage.isPresent()) {
-                return ResponseEntity.ok(successResponse("Message updated successfully", updatedMessage.get()));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(errorResponse("Message not found with ID: " + id));
-            }
+            return updatedMessage.map(value -> ResponseEntity.ok(successResponse("Message updated successfully", value))).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(errorResponse("Message not found with ID: " + id)));
         } catch (Exception e) {
             log.error("Error updating message", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -144,12 +139,8 @@ public class MessageController {
         log.info("Received get request for ID: {}", id);
         try {
             Optional<Message> message = messageService.read(id);
-            if (message.isPresent()) {
-                return ResponseEntity.ok(successResponse("Message retrieved successfully", message.get()));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(errorResponse("Message not found with ID: " + id));
-            }
+            return message.map(value -> ResponseEntity.ok(successResponse("Message retrieved successfully", value))).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(errorResponse("Message not found with ID: " + id)));
         } catch (Exception e) {
             log.error("Error retrieving message by ID", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -162,12 +153,8 @@ public class MessageController {
         log.info("Received get request for email: {}", email);
         try {
             Optional<Message> message = messageService.readByEmail(email);
-            if (message.isPresent()) {
-                return ResponseEntity.ok(successResponse("Message retrieved successfully", message.get()));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(errorResponse("Message not found with email: " + email));
-            }
+            return message.map(value -> ResponseEntity.ok(successResponse("Message retrieved successfully", value))).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(errorResponse("Message not found with email: " + email)));
         } catch (Exception e) {
             log.error("Error retrieving message by email", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -180,12 +167,8 @@ public class MessageController {
         log.info("Received get request for fingerprint: {}", fingerprint);
         try {
             Optional<Message> message = messageService.readByFingerPrint(fingerprint);
-            if (message.isPresent()) {
-                return ResponseEntity.ok(successResponse("Message retrieved successfully", message.get()));
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(errorResponse("Message not found with fingerprint: " + fingerprint));
-            }
+            return message.map(value -> ResponseEntity.ok(successResponse("Message retrieved successfully", value))).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(errorResponse("Message not found with fingerprint: " + fingerprint)));
         } catch (Exception e) {
             log.error("Error retrieving message by fingerprint", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
