@@ -1,0 +1,136 @@
+# Production Docker Compose Configuration
+# Use this for production deployments with proper security and optimization
+# Run with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  mongodb:
+    # Production MongoDB configuration
+    restart: always
+    
+    environment:
+      # Replica set for HA (optional but recommended)
+      # MONGO_REPLICA_SET: "rs0"
+      
+      # MongoDB authentication
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-change-me}
+    
+    # Production volumes for data persistence
+    volumes:
+      - mongodb_data_prod:/data/db
+      - mongodb_config_prod:/data/configdb
+      - /backups/mongodb:/backups  # Backup location
+    
+    # Production healthcheck
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=mongodb"
+
+  portfolio-api:
+    # Production API configuration
+    restart: always
+    
+    environment:
+      # Use environment variables for all sensitive data
+      SPRING_PROFILES_ACTIVE: prod
+      
+      # MongoDB with authentication
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGODB_USER:-admin}:${MONGODB_PASSWORD}@mongodb:27017/portfolio_db?authSource=admin&replicaSet=rs0
+      SPRING_DATA_MONGODB_AUTO_INDEX_CREATION: "true"
+      
+      # Email configuration (use secrets in production)
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT: "5000"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT: "5000"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT: "5000"
+      
+      # Logging configuration
+      LOGGING_LEVEL_ROOT: WARN
+      LOGGING_LEVEL_COM_EXAMPLE: INFO
+      LOGGING_FILE: /var/log/portfolio-api/application.log
+      LOGGING_FILE_MAX_SIZE: 10MB
+      LOGGING_FILE_MAX_HISTORY: 30
+    
+    # Production volume mounts
+    volumes:
+      - /var/log/portfolio-api:/app/logs
+      - /etc/portfolio-api:/app/config  # Configuration mounted from host
+    
+    # Production healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-s", "http://localhost:8080/api/messages"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+    
+    # Production logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=portfolio-api,env=production"
+    
+    # Disable interactive mode in production
+    stdin_open: false
+    tty: false
+
+volumes:
+  mongodb_data_prod:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/mongodb
+  
+  mongodb_config_prod:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /data/mongodb/config
+
+networks:
+  portfolio-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "true"

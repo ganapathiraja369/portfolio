@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # MongoDB Database Service
+  mongodb:
+    image: mongo:7.0
+    container_name: portfolio-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: portfolio_user
+      MONGO_INITDB_ROOT_PASSWORD: portfolio_password
+      MONGO_INITDB_DATABASE: portfolio_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - portfolio-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Portfolio API Service
+  portfolio-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portfolio-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring Configuration
+      SPRING_APPLICATION_NAME: portfolio-api
+      SERVER_PORT: 8080
+      
+      # MongoDB Configuration
+      SPRING_DATA_MONGODB_URI: mongodb://portfolio_user:portfolio_password@mongodb:27017/portfolio_db?authSource=admin
+      SPRING_DATA_MONGODB_AUTO_INDEX_CREATION: "true"
+      
+      # Mail Configuration (Gmail SMTP)
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
+      SPRING_MAIL_USERNAME: prdy0000@gmail.com
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-your-app-password-here}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT: "5000"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT: "5000"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT: "5000"
+      
+      # FreeMarker Configuration
+      SPRING_FREEMARKER_TEMPLATE_LOADER_PATH: classpath:/templates/
+      SPRING_FREEMARKER_SUFFIX: .ftl
+      SPRING_FREEMARKER_CHARSET: UTF-8
+      SPRING_FREEMARKER_EXPOSE_REQUEST_ATTRIBUTES: "true"
+      SPRING_FREEMARKER_EXPOSE_SPRING_MACRO_HELPERS: "true"
+      
+      # Logging Configuration
+      LOGGING_LEVEL_ROOT: INFO
+      LOGGING_LEVEL_COM_EXAMPLE: DEBUG
+    
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    
+    volumes:
+      - ./logs:/app/logs
+    
+    networks:
+      - portfolio-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/messages"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: MongoDB Express for GUI Database Management
+  # Uncomment to enable
+  # mongo-express:
+  #   image: mongo-express:latest
+  #   container_name: mongo-express
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     ME_CONFIG_MONGODB_ADMINUSERNAME: portfolio_user
+  #     ME_CONFIG_MONGODB_ADMINPASSWORD: portfolio_password
+  #     ME_CONFIG_MONGODB_URL: mongodb://portfolio_user:portfolio_password@mongodb:27017
+  #     ME_CONFIG_BASICAUTH_USERNAME: admin
+  #     ME_CONFIG_BASICAUTH_PASSWORD: admin
+  #   depends_on:
+  #     - mongodb
+  #   networks:
+  #     - portfolio-network
+
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+
+networks:
+  portfolio-network:
+    driver: bridge

@@ -1,0 +1,67 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build
+build/
+dist/
+.gradle/
+.git/
+.gitignore
+.gitattributes
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+application-local.yml
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentation
+*.md
+README.md
+FREEMARKER_EMAIL_GUIDE.md
+EMAIL_SETUP_GUIDE.md
+IMPLEMENTATION_SUMMARY.md
+API_EXAMPLES.md
+QUICK_START.md
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+
+# Python (if any)
+__pycache__/
+*.py[cod]
+*$py.class
