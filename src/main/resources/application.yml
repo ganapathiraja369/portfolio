@@ -17,9 +17,9 @@ spring:
           starttls:
             enable: true
             required: true
-          connectiontimeout: 15000
-          timeout: 15000
-          writetimeout: 15000
+          connectiontimeout: 7000
+          timeout: 7000
+          writetimeout: 7000
   freemarker:
     template-loader-path: classpath:/templates/
     suffix: .ftl
