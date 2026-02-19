@@ -3,6 +3,7 @@ package com.example.controller;
 import com.example.dto.ApiResponse;
 import com.example.dto.MessageRequest;
 import com.example.entity.Message;
+import com.example.service.EmailService;
 import com.example.service.MessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
