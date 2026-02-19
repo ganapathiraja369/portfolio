@@ -72,7 +72,7 @@ public class MessageController {
      * Accepts complete JSON body with: name, email, message, fingerPrint
      * The ID is auto-generated for new messages
      */
-    @PostMapping
+    @PostMapping("/push")
     public ResponseEntity<ApiResponse<Message>> saveMessage(@RequestBody MessageRequest request) {
         log.info("Received save request for email: {}", request.getEmail());
         try {
@@ -104,7 +104,7 @@ public class MessageController {
      * @param request the updated message data
      * @return the updated message
      */
-    @PutMapping("/{id}")
+    //@PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Message>> updateMessage(
             @PathVariable String id,
             @RequestBody MessageRequest request) {
@@ -139,7 +139,7 @@ public class MessageController {
      * GET /api/messages/by-fingerprint/{fingerprint} - get message by fingerprint
      * GET /api/messages - get all messages
      */
-    @GetMapping("/{id}")
+    @GetMapping("/getted/{id}")
     public ResponseEntity<ApiResponse<Message>> getMessageById(@PathVariable String id) {
         log.info("Received get request for ID: {}", id);
         try {
@@ -157,7 +157,7 @@ public class MessageController {
         }
     }
 
-    @GetMapping("/by-email/{email}")
+    @GetMapping("/getted/by-email/{email}")
     public ResponseEntity<ApiResponse<Message>> getMessageByEmail(@PathVariable String email) {
         log.info("Received get request for email: {}", email);
         try {
@@ -175,7 +175,7 @@ public class MessageController {
         }
     }
 
-    @GetMapping("/by-fingerprint/{fingerprint}")
+    @GetMapping("/getted/by-fingerprint/{fingerprint}")
     public ResponseEntity<ApiResponse<Message>> getMessageByFingerprint(@PathVariable String fingerprint) {
         log.info("Received get request for fingerprint: {}", fingerprint);
         try {
@@ -193,7 +193,7 @@ public class MessageController {
         }
     }
 
-    @GetMapping
+    @GetMapping("/getted")
     public ResponseEntity<ApiResponse<List<Message>>> getAllMessages() {
         log.info("Received get all messages request");
         try {
@@ -213,7 +213,7 @@ public class MessageController {
      * @param id the message ID
      * @return success response
      */
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/getted/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteMessage(@PathVariable String id) {
         log.info("Received delete request for ID: {}", id);
         try {
