@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,14 +26,53 @@ public class MessageController {
     private final EmailService emailService;
 
     /**
+     * Helper method to build success response
+     */
+    private <T> ApiResponse<T> successResponse(String message, T data) {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .message(message)
+                .data(data)
+                .build();
+    }
+
+    /**
+     * Helper method to build error response
+     */
+    private <T> ApiResponse<T> errorResponse(String message) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .build();
+    }
+
+    /**
+     * Send notification email asynchronously
+     */
+    @Async
+    private void sendNotificationEmailAsync(Message message) {
+        try {
+            emailService.sendMessageNotificationEmail(
+                    message.getName(),
+                    message.getEmail(),
+                    message.getMessage(),
+                    message.getFingerPrint(),
+                    message.getId()
+            );
+        } catch (Exception e) {
+            log.warn("Failed to send notification email for message ID: {}", message.getId(), e);
+        }
+    }
+
+    /**
      * API 1: Save or Update a message
-     * POST /api/messages/save - saves a new message
+     * POST /api/messages - saves a new message
      * PUT /api/messages/{id} - updates an existing message
      * 
      * Accepts complete JSON body with: name, email, message, fingerPrint
      * The ID is auto-generated for new messages
      */
-    @PostMapping("/push")
+    @PostMapping
     public ResponseEntity<ApiResponse<Message>> saveMessage(@RequestBody MessageRequest request) {
         log.info("Received save request for email: {}", request.getEmail());
         try {
@@ -44,27 +84,15 @@ public class MessageController {
                     .build();
 
             Message savedMessage = messageService.save(message);
-            emailService.sendMessageNotificationEmail(
-                    savedMessage.getName(),
-                    savedMessage.getEmail(),
-                    savedMessage.getMessage(),
-                    savedMessage.getFingerPrint(),
-                    savedMessage.getId()
-            );
-            ApiResponse<Message> response = ApiResponse.<Message>builder()
-                    .success(true)
-                    .message("Message saved successfully")
-                    .data(savedMessage)
-                    .build();
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            // Send email asynchronously to avoid blocking response
+            sendNotificationEmailAsync(savedMessage);
+            
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(successResponse("Message saved successfully", savedMessage));
         } catch (Exception e) {
             log.error("Error saving message", e);
-            ApiResponse<Message> response = ApiResponse.<Message>builder()
-                    .success(false)
-                    .message("Error saving message: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse("Error saving message: " + e.getMessage()));
         }
     }
 
@@ -92,144 +120,89 @@ public class MessageController {
             Optional<Message> updatedMessage = messageService.update(id, message);
 
             if (updatedMessage.isPresent()) {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(true)
-                        .message("Message updated successfully")
-                        .data(updatedMessage.get())
-                        .build();
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(successResponse("Message updated successfully", updatedMessage.get()));
             } else {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(false)
-                        .message("Message not found with ID: " + id)
-                        .build();
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(errorResponse("Message not found with ID: " + id));
             }
         } catch (Exception e) {
             log.error("Error updating message", e);
-            ApiResponse<Message> response = ApiResponse.<Message>builder()
-                    .success(false)
-                    .message("Error updating message: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse("Error updating message: " + e.getMessage()));
         }
     }
 
     /**
      * API 2: Retrieve message(s)
      * GET /api/messages/{id} - get message by ID
-     * GET /api/messages/email/{email} - get message by email
-     * GET /api/messages/fingerprint/{fingerprint} - get message by fingerprint
+     * GET /api/messages/by-email/{email} - get message by email
+     * GET /api/messages/by-fingerprint/{fingerprint} - get message by fingerprint
      * GET /api/messages - get all messages
      */
-    @GetMapping("/getted/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Message>> getMessageById(@PathVariable String id) {
         log.info("Received get request for ID: {}", id);
         try {
             Optional<Message> message = messageService.read(id);
-
             if (message.isPresent()) {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(true)
-                        .message("Message retrieved successfully")
-                        .data(message.get())
-                        .build();
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(successResponse("Message retrieved successfully", message.get()));
             } else {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(false)
-                        .message("Message not found with ID: " + id)
-                        .build();
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(errorResponse("Message not found with ID: " + id));
             }
         } catch (Exception e) {
-            log.error("Error retrieving message", e);
-            ApiResponse<Message> response = ApiResponse.<Message>builder()
-                    .success(false)
-                    .message("Error retrieving message: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            log.error("Error retrieving message by ID", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse("Error retrieving message: " + e.getMessage()));
         }
     }
 
-    @GetMapping("/getted/email/{email}")
+    @GetMapping("/by-email/{email}")
     public ResponseEntity<ApiResponse<Message>> getMessageByEmail(@PathVariable String email) {
         log.info("Received get request for email: {}", email);
         try {
             Optional<Message> message = messageService.readByEmail(email);
-
             if (message.isPresent()) {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(true)
-                        .message("Message retrieved successfully")
-                        .data(message.get())
-                        .build();
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(successResponse("Message retrieved successfully", message.get()));
             } else {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(false)
-                        .message("Message not found with email: " + email)
-                        .build();
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(errorResponse("Message not found with email: " + email));
             }
         } catch (Exception e) {
             log.error("Error retrieving message by email", e);
-            ApiResponse<Message> response = ApiResponse.<Message>builder()
-                    .success(false)
-                    .message("Error retrieving message: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse("Error retrieving message: " + e.getMessage()));
         }
     }
 
-    @GetMapping("/getted/fingerprint/{fingerprint}")
+    @GetMapping("/by-fingerprint/{fingerprint}")
     public ResponseEntity<ApiResponse<Message>> getMessageByFingerprint(@PathVariable String fingerprint) {
         log.info("Received get request for fingerprint: {}", fingerprint);
         try {
             Optional<Message> message = messageService.readByFingerPrint(fingerprint);
-
             if (message.isPresent()) {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(true)
-                        .message("Message retrieved successfully")
-                        .data(message.get())
-                        .build();
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(successResponse("Message retrieved successfully", message.get()));
             } else {
-                ApiResponse<Message> response = ApiResponse.<Message>builder()
-                        .success(false)
-                        .message("Message not found with fingerprint: " + fingerprint)
-                        .build();
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(errorResponse("Message not found with fingerprint: " + fingerprint));
             }
         } catch (Exception e) {
             log.error("Error retrieving message by fingerprint", e);
-            ApiResponse<Message> response = ApiResponse.<Message>builder()
-                    .success(false)
-                    .message("Error retrieving message: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse("Error retrieving message: " + e.getMessage()));
         }
     }
 
-    @GetMapping("/getted")
+    @GetMapping
     public ResponseEntity<ApiResponse<List<Message>>> getAllMessages() {
         log.info("Received get all messages request");
         try {
             List<Message> messages = messageService.readAll();
-            ApiResponse<List<Message>> response = ApiResponse.<List<Message>>builder()
-                    .success(true)
-                    .message("Messages retrieved successfully")
-                    .data(messages)
-                    .build();
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(successResponse("Messages retrieved successfully", messages));
         } catch (Exception e) {
             log.error("Error retrieving all messages", e);
-            ApiResponse<List<Message>> response = ApiResponse.<List<Message>>builder()
-                    .success(false)
-                    .message("Error retrieving messages: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse("Error retrieving messages: " + e.getMessage()));
         }
     }
 
@@ -240,32 +213,22 @@ public class MessageController {
      * @param id the message ID
      * @return success response
      */
-    @DeleteMapping("/getted/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteMessage(@PathVariable String id) {
         log.info("Received delete request for ID: {}", id);
         try {
             boolean deleted = messageService.delete(id);
 
             if (deleted) {
-                ApiResponse<Void> response = ApiResponse.<Void>builder()
-                        .success(true)
-                        .message("Message deleted successfully")
-                        .build();
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(successResponse("Message deleted successfully", null));
             } else {
-                ApiResponse<Void> response = ApiResponse.<Void>builder()
-                        .success(false)
-                        .message("Message not found with ID: " + id)
-                        .build();
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(errorResponse("Message not found with ID: " + id));
             }
         } catch (Exception e) {
             log.error("Error deleting message", e);
-            ApiResponse<Void> response = ApiResponse.<Void>builder()
-                    .success(false)
-                    .message("Error deleting message: " + e.getMessage())
-                    .build();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(errorResponse("Error deleting message: " + e.getMessage()));
         }
     }
 }
