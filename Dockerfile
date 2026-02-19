@@ -36,11 +36,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Environment variables (can be overridden at runtime)
 ENV SPRING_APPLICATION_NAME=portfolio-api
 ENV SERVER_PORT=8080
-ENV SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/portfolio_db
+#ENV SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/portfolio_db
 ENV SPRING_MAIL_HOST=smtp.gmail.com
 ENV SPRING_MAIL_PORT=587
-ENV SPRING_MAIL_USERNAME=prdy0000@gmail.com
-ENV SPRING_MAIL_PASSWORD=your-app-password-here
+#ENV SPRING_MAIL_USERNAME=prdy0000@gmail.com
+#ENV SPRING_MAIL_PASSWORD=your-app-password-here
 ENV SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
 ENV SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
 ENV SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED=true
