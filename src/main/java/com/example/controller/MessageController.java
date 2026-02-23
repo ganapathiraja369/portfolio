@@ -84,7 +84,7 @@ public class MessageController {
 
             Message savedMessage = messageService.save(message);
             // Send email asynchronously to avoid blocking response
-            sendNotificationEmailAsync(savedMessage);
+           // sendNotificationEmailAsync(savedMessage);
             
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(successResponse("Message saved successfully", savedMessage));
